@@ -1,7 +1,11 @@
 import { NextRequest } from 'next/server';
 import { cookies, headers } from 'next/headers';
 import { withAuth } from '@/lib/with-auth';
+ import axios from 'axios';
 
+const appconfig={
+   domainapi :'https://f7.donggiatri.com/users/demo/pluto/'
+};
 
 // async function secretGET(request: NextRequest) {
 //   return new Response(JSON.stringify({ secret: 'Here be dragons' }), {
@@ -21,17 +25,17 @@ export async function GET(request: NextRequest) {
   const auth = request.headers.get('auth-token');
   const pathname = request.headers.get('x-next-pathname');
 
-  url = 'https://f7.donggiatri.com/users/demo/f7vay'+pathname;
-  let data = await fetch(url, {
-    // Optional: forward some headers, add auth tokens, etc.
-    headers: { "auth-token": auth },
-  }).then((r)=>r.text()).catch((e)=>{
+  const headers ={};
+  if(auth){
+    headers["auth-token"]  =auth;
+  }
 
-  });
+  url = appconfig.domainapi+pathname;
+  let data = await axios.get(url);
 
-  const transformed = { ...data, source: 'proxied-through-nextjs',url };
+  let transformed = typeof data.data=="object"? JSON.stringify(data.data):data.data;
  
-  return new Response(JSON.stringify(transformed), {
+  return new Response(transformed, {
     headers: { 'Content-Type': 'application/json' },
   });
 }
@@ -52,28 +56,27 @@ export async function GET(request: NextRequest) {
 //   });
 // }
  
-export async function POST(request: Request) {
-  // 1. Using 'next/headers' helpers
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token');
- 
-  const headersList = await headers();
-  const referer = headersList.get('referer');
+export async function POST(request: NextRequest) {
+ let url  = request.nextUrl.pathname;
+
+  // const headersList = await headers();
+  // const referer = headersList.get('referer');
  
   // 2. Using the standard Web APIs
-  const userAgent = request.headers.get('user-agent');
+  const auth = request.headers.get('auth-token');
+  const pathname = request.headers.get('x-next-pathname');
 
-  // Parse the request body
-  const body = await request.json();
-  const { name } = body;
+  
+  url = appconfig.domainapi+pathname; 
+  let data = await axios.post(url,{});
+
+  let transformed = typeof data.data=="object"? JSON.stringify(data.data):data.data;
  
-  // e.g. Insert new user into your DB
-  const newUser = { id: Date.now(), name };
- 
-  return new Response(JSON.stringify(newUser), {
-    status: 201,
-    headers: { 'Content-Type': 'application/json' }
+  return new Response(transformed, {
+    headers: { 'Content-Type': 'application/json' },
   });
+ 
+   
 }
 
 
