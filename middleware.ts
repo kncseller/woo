@@ -1,8 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { rootDomain } from '@/lib/utils';
+// import { rootDomain } from '@/lib/utils';
 
-const appconfig={
-   domainapi :'https://f7.donggiatri.com/users/demo/pluto/'
+// const appconfig={
+//    domainapi :'https://f7.donggiatri.com/users/demo/pluto/'
+// };
+
+const domains = {
+  "ato":"/", 
+  "mb":"/", 
+  "woo":"/",
+  "aship":"/", 
 };
 
 function extractSubdomain(request: NextRequest): string | null {
@@ -10,6 +17,8 @@ function extractSubdomain(request: NextRequest): string | null {
   const host = request.headers.get('host') || '';
   const hostname = host.split(':')[0];
 
+
+  
   // Local development environment
   if (url.includes('localhost') || url.includes('127.0.0.1')) {
     // Try to extract subdomain from the full URL
@@ -26,42 +35,60 @@ function extractSubdomain(request: NextRequest): string | null {
     return null;
   }
 
-  // Production environment
-  const rootDomainFormatted = rootDomain.split(':')[0];
+  return hostname.includes('.')?hostname.split('.').slice(0, -2).join('.'):null;
 
-  // Handle preview deployment URLs (tenant---branch-name.vercel.app)
-  if (hostname.includes('---') && hostname.endsWith('.vercel.app')) {
-    const parts = hostname.split('---');
-    return parts.length > 0 ? parts[0] : null;
-  }
+  // // Production environment
+  // const rootDomainFormatted = rootDomain.split(':')[0];
 
-  // Regular subdomain detection
-  const isSubdomain =
-    hostname !== rootDomainFormatted &&
-    hostname !== `www.${rootDomainFormatted}` &&
-    hostname.endsWith(`.${rootDomainFormatted}`);
+  // // Handle preview deployment URLs (tenant---branch-name.vercel.app)
+  // if (hostname.includes('---') && hostname.endsWith('.vercel.app')) {
+  //   const parts = hostname.split('---');
+  //   return parts.length > 0 ? parts[0] : null;
+  // }
 
-  return isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
+
+
+  // // Regular subdomain detection
+  // const isSubdomain =
+  //   hostname !== rootDomainFormatted &&
+  //   hostname !== `www.${rootDomainFormatted}` &&
+  //   hostname.endsWith(`.${rootDomainFormatted}`);
+
+  // return isSubdomain ? hostname.replace(`.${rootDomainFormatted}`, '') : null;
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const subdomain = extractSubdomain(request);
+  let subdomain = extractSubdomain(request);
 
   if (subdomain) {
-    // Block access to admin page from subdomains
-    if (pathname.startsWith('/admin')) {
-      return NextResponse.redirect(new URL('/', request.url));
+
+
+    if(subdomain.includes("admin")){
+       subdomain = "admin";
+    }else{
+       subdomain = domains[subdomain]||subdomain;
     }
 
-    // For the root path on a subdomain, rewrite to the subdomain page
-    if (pathname === '/') {
-      return NextResponse.rewrite(new URL(`/s/${subdomain}`, request.url));
-    }
-    //detail api
-     if (pathname.startsWith('/api/')) { 
-        return NextResponse.json(new URL(`/s/${subdomain}/api/index/`, request.url));
+
+    if(subdomain!="/"){
+
+      // Block access to admin page from subdomains
+      if (pathname.startsWith('/admin')) {
+        return NextResponse.redirect(new URL('/', request.url));
       }
+
+      // For the root path on a subdomain, rewrite to the subdomain page
+      if (pathname === '/') {
+        return NextResponse.rewrite(new URL(`/s/${subdomain}`, request.url));
+      }
+      //detail api
+       if (pathname.startsWith('/api/')) { 
+          return NextResponse.json(new URL(`/s/${subdomain}/api/index/`, request.url));
+        }
+    }
+   
+
   }
 
   if (pathname != '/') {
